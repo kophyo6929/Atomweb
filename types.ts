@@ -43,6 +43,7 @@ export interface Order {
     deliveryInfo?: string;
     paymentMethod?: string;
     paymentProof?: string;
+    actionBy?: string; // Admin username who approved/declined
 }
 
 export interface PaymentAccount {

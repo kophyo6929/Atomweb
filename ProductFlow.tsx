@@ -131,6 +131,7 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
     const [showPhoneModal, setShowPhoneModal] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleBuyClick = (product: ProductItem) => {
         setSelectedProduct(product);
@@ -147,10 +148,22 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
     };
     
     const handleConfirmPurchase = () => {
-        if (selectedProduct) {
-            onPurchase(selectedProduct, phone);
-        }
-        closeModals();
+        if (isSubmitting || !selectedProduct) return;
+        setIsSubmitting(true);
+
+        // Use a short timeout to allow the UI to update to the 'disabled' state
+        // before navigating away, which improves perceived performance.
+        setTimeout(() => {
+            try {
+                onPurchase(selectedProduct, phone);
+                // onPurchase navigates away, so no need to reset state here.
+                // The component will unmount.
+            } catch (e) {
+                console.error("Purchase failed", e);
+                showNotification("An error occurred during purchase.", 'error');
+                setIsSubmitting(false); // Re-enable on error
+            }
+        }, 50);
     };
 
     const closeModals = () => {
@@ -158,6 +171,7 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
         setShowConfirmModal(false);
         setSelectedProduct(null);
         setPhone('');
+        setIsSubmitting(false); // Reset submitting state on any close action
     };
 
     const filteredProducts = products.filter(p => 
@@ -222,7 +236,9 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
                         </div>
                         <div className="modal-actions">
                             <button onClick={closeModals} className="button-secondary">{t('common.cancel')}</button>
-                            <button onClick={handleConfirmPurchase} className="submit-button">{t('productFlow.confirmModal.confirmButton')}</button>
+                            <button onClick={handleConfirmPurchase} className="submit-button" disabled={isSubmitting}>
+                                {isSubmitting ? t('common.processing') : t('productFlow.confirmModal.confirmButton')}
+                            </button>
                         </div>
                     </div>
                 </div>

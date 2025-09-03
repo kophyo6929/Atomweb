@@ -256,12 +256,33 @@ const AdminManageUsers: React.FC<{
     currentUser: User,
     onLogout: () => void,
 }> = ({ users, setUsers, setOrders, currentUser, onLogout }) => {
-    // BUG FIX: Instead of storing the whole user object in state (which can become stale),
-    // store only the ID. This avoids the need for a complex useEffect to sync state and
-    // prevents the infinite loop that was blocking UI updates.
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+    const [addAdminId, setAddAdminId] = useState('');
 
-    // Derive the selected user from props on every render. This ensures the data is always fresh.
+    const handleAddAdmin = (e: React.FormEvent) => {
+        e.preventDefault();
+        const id = parseInt(addAdminId, 10);
+        if (isNaN(id)) {
+            alert('Please enter a valid User ID.');
+            return;
+        }
+        
+        const user = users.find(u => u.id === id);
+        if (!user) {
+            alert(`User with ID ${id} not found.`);
+            return;
+        }
+
+        if (user.isAdmin) {
+            alert(`User ${user.username} is already an admin.`);
+            return;
+        }
+
+        setUsers(prevUsers => prevUsers.map(u => u.id === id ? { ...u, isAdmin: true } : u));
+        alert(`Success! ${user.username} has been promoted to an admin.`);
+        setAddAdminId('');
+    };
+
     const selectedUser = users.find(u => u.id === selectedUserId);
     
     if (selectedUser) {
@@ -278,6 +299,24 @@ const AdminManageUsers: React.FC<{
     return (
         <div>
             <h2>Manage Users</h2>
+            <div className="admin-add-admin-form">
+                <form onSubmit={handleAddAdmin}>
+                    <h3>Promote User to Admin</h3>
+                    <div className="input-group">
+                        <label htmlFor="add-admin-id">User ID</label>
+                        <input 
+                            id="add-admin-id"
+                            type="number"
+                            value={addAdminId}
+                            onChange={(e) => setAddAdminId(e.target.value)}
+                            className="input-field"
+                            placeholder="Enter 6-digit User ID"
+                        />
+                    </div>
+                    <button type="submit" className="button-success submit-button" disabled={!addAdminId}>Make Admin</button>
+                </form>
+            </div>
+
             {users.length > 0 ? (
                  <div className="admin-table-container">
                     <table className="admin-table">
@@ -541,7 +580,8 @@ const AdminViewAllOrders: React.FC<{
     users: User[];
     setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
-}> = ({ orders, users, setOrders, setUsers }) => {
+    currentUser: User;
+}> = ({ orders, users, setOrders, setUsers, currentUser }) => {
     const [viewingProof, setViewingProof] = useState<string | null>(null);
 
     const handleApproval = (orderToApprove: Order) => {
@@ -555,7 +595,7 @@ const AdminViewAllOrders: React.FC<{
         } else {
             alert(`Approved product purchase for ${user.username}.`);
         }
-        setOrders(prev => prev.map(o => o.id === orderToApprove.id ? { ...o, status: 'Completed' } : o));
+        setOrders(prev => prev.map(o => o.id === orderToApprove.id ? { ...o, status: 'Completed', actionBy: currentUser.username } : o));
     };
 
     const handleDecline = (orderToDecline: Order) => {
@@ -569,7 +609,7 @@ const AdminViewAllOrders: React.FC<{
         } else {
              alert(`Payment request ${orderToDecline.id} has been declined.`);
         }
-        setOrders(prev => prev.map(o => o.id === orderToDecline.id ? { ...o, status: 'Declined' } : o));
+        setOrders(prev => prev.map(o => o.id === orderToDecline.id ? { ...o, status: 'Declined', actionBy: currentUser.username } : o));
     };
 
     const sortRecentFirst = (a: Order, b: Order) => new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -585,7 +625,7 @@ const AdminViewAllOrders: React.FC<{
     const renderProductOrderTable = (orderList: Order[]) => (
          <div className="admin-table-container">
             <table className="admin-table">
-                <thead><tr><th>Order ID</th><th>User</th><th>Product</th><th>Cost (C)</th><th>Deliver To</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Order ID</th><th>User</th><th>Product</th><th>Cost (C)</th><th>Deliver To</th><th>Status</th><th>Date</th><th>Action / By</th></tr></thead>
                 <tbody>
                     {orderList.map(o => {
                         const user = users.find(u => u.id === o.userId);
@@ -598,7 +638,12 @@ const AdminViewAllOrders: React.FC<{
                                 <td>{o.deliveryInfo}</td>
                                 <td><span className={`status-badge status-${o.status.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>{o.status}</span></td>
                                 <td>{new Date(o.date).toLocaleString()}</td>
-                                {o.status === 'Pending Approval' && <td className="admin-actions"><button onClick={() => handleApproval(o)} className="button-success">Approve</button><button onClick={() => handleDecline(o)} className="button-danger">Decline</button></td>}
+                                <td className="admin-actions">
+                                    {o.status === 'Pending Approval' ? <>
+                                        <button onClick={() => handleApproval(o)} className="button-success">Approve</button>
+                                        <button onClick={() => handleDecline(o)} className="button-danger">Decline</button>
+                                    </> : (o.actionBy || 'N/A')}
+                                </td>
                             </tr>
                         );
                     })}
@@ -610,7 +655,7 @@ const AdminViewAllOrders: React.FC<{
     const renderPaymentRequestTable = (paymentList: Order[]) => (
          <div className="admin-table-container">
             <table className="admin-table">
-                <thead><tr><th>Order ID</th><th>User</th><th>Amount (MMK)</th><th>Method</th><th>Proof</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Order ID</th><th>User</th><th>Amount (MMK)</th><th>Method</th><th>Proof</th><th>Status</th><th>Date</th><th>Action / By</th></tr></thead>
                 <tbody>
                     {paymentList.map(o => {
                         const user = users.find(u => u.id === o.userId);
@@ -623,7 +668,12 @@ const AdminViewAllOrders: React.FC<{
                                 <td>{o.paymentProof ? <button className="button-view-proof" onClick={() => setViewingProof(o.paymentProof as string)}>View</button> : 'N/A'}</td>
                                 <td><span className={`status-badge status-${o.status.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>{o.status}</span></td>
                                 <td>{new Date(o.date).toLocaleString()}</td>
-                                 {o.status === 'Pending Approval' && <td className="admin-actions"><button onClick={() => handleApproval(o)} className="button-success">Approve</button><button onClick={() => handleDecline(o)} className="button-danger">Decline</button></td>}
+                                 <td className="admin-actions">
+                                    {o.status === 'Pending Approval' ? <>
+                                        <button onClick={() => handleApproval(o)} className="button-success">Approve</button>
+                                        <button onClick={() => handleDecline(o)} className="button-danger">Decline</button>
+                                    </> : (o.actionBy || 'N/A')}
+                                </td>
                             </tr>
                         );
                     })}

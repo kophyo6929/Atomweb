@@ -22,6 +22,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
     const [paymentMethod, setPaymentMethod] = useState(''); // 'KPay' or 'Wave Pay'
     const [paymentProof, setPaymentProof] = useState<string | null>(null); // base64 string
     const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null); // object URL for preview
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const creditPackages = [10, 30, 50, 100];
 
@@ -60,30 +61,43 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
     };
     
     const handleSubmitRequest = () => {
+        if (isSubmitting) return;
+
         if (!paymentProof) {
             showNotification(t('buyCredits.alerts.noProof'), 'error');
             return;
         }
-        const creditAmount = parseFloat(amountMMK) / MMK_PER_CREDIT;
-        const newOrder: Order = {
-            id: `CRD-${Date.now()}`,
-            userId: user.id,
-            type: 'CREDIT',
-            product: { name: `${creditAmount.toFixed(2)} Credits Purchase` },
-            cost: parseFloat(amountMMK), // Cost is in MMK
-            paymentMethod: paymentMethod,
-            paymentProof: paymentProof,
-            status: 'Pending Approval',
-            date: new Date().toISOString(),
-        };
-        setOrders(prev => [...prev, newOrder]);
+        setIsSubmitting(true);
 
-        // Send notification to Admin
-        const notificationMessage = `💰 Credit Request: ${user.username} requests ${parseFloat(amountMMK).toLocaleString()} MMK via ${paymentMethod}.`;
-        onAdminNotify(notificationMessage);
+        // Use a short timeout to allow the UI to update to the 'disabled' state
+        // before navigating away, which improves perceived performance.
+        setTimeout(() => {
+            try {
+                const creditAmount = parseFloat(amountMMK) / MMK_PER_CREDIT;
+                const newOrder: Order = {
+                    id: `CRD-${Date.now()}`,
+                    userId: user.id,
+                    type: 'CREDIT',
+                    product: { name: `${creditAmount.toFixed(2)} Credits Purchase` },
+                    cost: parseFloat(amountMMK), // Cost is in MMK
+                    paymentMethod: paymentMethod,
+                    paymentProof: paymentProof,
+                    status: 'Pending Approval',
+                    date: new Date().toISOString(),
+                };
+                setOrders(prev => [...prev, newOrder]);
 
-        showNotification(t('notifications.orderSuccess'), 'success');
-        onNavigate('MY_ORDERS');
+                const notificationMessage = `💰 Credit Request: ${user.username} requests ${parseFloat(amountMMK).toLocaleString()} MMK via ${paymentMethod}.`;
+                onAdminNotify(notificationMessage);
+
+                showNotification(t('notifications.orderSuccess'), 'success');
+                onNavigate('MY_ORDERS');
+            } catch (error) {
+                console.error("Failed to submit credit request:", error);
+                showNotification('An unexpected error occurred.', 'error');
+                setIsSubmitting(false); // Re-enable button on error
+            }
+        }, 50);
     };
 
     const goBack = () => {
@@ -178,8 +192,8 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleSubmitRequest} className="submit-button" disabled={!paymentProof}>
-                            {t('buyCredits.submitRequestButton')}
+                        <button onClick={handleSubmitRequest} className="submit-button" disabled={!paymentProof || isSubmitting}>
+                           {isSubmitting ? t('common.processing') : t('buyCredits.submitRequestButton')}
                         </button>
                     </div>
                 );
