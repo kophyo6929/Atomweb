@@ -314,7 +314,6 @@ body.dashboard-background::after {
 
 /* --- Logo --- */
 .logo {
-  font-size: 1.5rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -326,6 +325,15 @@ body.dashboard-background::after {
     width: 36px;
     height: 36px;
     filter: drop-shadow(0 0 5px rgba(230, 126, 34, 0.5));
+}
+.logo-text-container {
+    display: flex;
+    align-items: center;
+}
+.logo-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1;
 }
 
 /* --- Buttons --- */
@@ -1285,6 +1293,73 @@ body.dashboard-background::after {
     border-left: 3px solid var(--primary-accent);
 }
 
+/* --- Notifications System (New) --- */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.notification-toast {
+    background-color: var(--card-dark);
+    color: var(--text-primary);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 250px;
+    max-width: 400px;
+    border-left-width: 5px;
+    animation: slideInFromRight 0.4s ease-out forwards;
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(110%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification-toast.notification-success {
+    border-left-color: var(--success-green);
+}
+
+.notification-toast.notification-error {
+    border-left-color: var(--danger-red);
+}
+
+.notification-toast.notification-info {
+    border-left-color: var(--primary-accent);
+}
+
+.notification-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 0 0 0.5rem;
+    line-height: 1;
+    margin-left: auto;
+    transition: color 0.2s;
+}
+.notification-close-btn:hover {
+    color: var(--text-primary);
+}
+
+
 /* --- Empty State --- */
 .empty-state-container {
     padding: 3rem 1.5rem;
@@ -1412,9 +1487,6 @@ body.dashboard-background::after {
     .logo {
         gap: 0.5rem;
     }
-    .logo span {
-        display: none; /* Hide text on very small screens to save space */
-    }
 }
 
 @media (max-width: 480px) { /* More granular control for smaller phones */
@@ -1430,15 +1502,43 @@ body.dashboard-background::after {
 
 
 @media (max-width: 400px) {
-    .logo span {
-        display: inline; /* Show text again if needed or adjust */
-    }
     .dashboard-main h2 {
         font-size: 1.8rem;
     }
     .package-buttons {
         /* On very small screens, stack them */
         grid-template-columns: 1fr;
+    }
+}
+
+/* --- Loading Spinner --- */
+.loading-spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Use the same background as the app to make it seamless */
+    background-color: #000;
+    background-image: radial-gradient(ellipse at 50% 100%, rgba(60, 40, 10, 0.7) 0%, #000 60%);
+    z-index: 9999;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid var(--border-color);
+    border-top-color: var(--primary-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }
 

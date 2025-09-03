@@ -24,7 +24,9 @@ export const Logo = () => (
                 d="M50 18 L58 32 L75 32 L62 41 L65 58 L50 50 L35 58 L38 41 L25 32 L42 32 Z"
             />
         </svg>
-        <span>ATOM POINT</span>
+        <div className="logo-text-container">
+            <span className="logo-title">Operators Store</span>
+        </div>
     </div>
 );
 
@@ -53,5 +55,11 @@ export const EmptyState: React.FC<{ message: string; subMessage?: string; }> = (
         <div className="empty-state-icon">📭</div>
         <h3>{message}</h3>
         {subMessage && <p>{subMessage}</p>}
+    </div>
+);
+
+export const LoadingSpinner = () => (
+    <div className="loading-spinner-overlay">
+        <div className="loading-spinner"></div>
     </div>
 );

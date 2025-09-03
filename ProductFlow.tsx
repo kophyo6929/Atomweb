@@ -3,6 +3,7 @@ import { ProductsData, ProductItem, User, Order } from './types';
 import { calculateCreditCost } from './utils';
 import { Logo, EmptyState } from './components';
 import { useLanguage } from './i18n';
+import { useNotification } from './NotificationContext';
 
 // --- PRODUCT BROWSE & PURCHASE FLOW --- //
 
@@ -19,6 +20,7 @@ interface ProductFlowProps {
 
 const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers, onAdminNotify }: ProductFlowProps) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [step, setStep] = useState('OPERATOR'); // OPERATOR, CATEGORY, LIST
     const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -47,7 +49,7 @@ const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers, 
         const cost = calculateCreditCost(product.price_mmk);
 
         if (user.credits < cost) {
-            alert(t('productFlow.confirmModal.alertNotEnoughCredits'));
+            showNotification(t('productFlow.confirmModal.alertNotEnoughCredits'), 'error');
             return;
         }
 
@@ -71,7 +73,7 @@ const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers, 
         const notificationMessage = `📦 New Order: ${user.username} bought ${product.name} for ${deliveryInfo}.`;
         onAdminNotify(notificationMessage);
 
-        alert(t('productFlow.confirmModal.alertOrderSubmitted', { productName: product.name, cost: cost.toFixed(2) }));
+        showNotification(t('notifications.orderSuccess'), 'success');
         onNavigate('DASHBOARD');
     };
 
@@ -123,6 +125,7 @@ interface ProductListProps {
 
 const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
     const [phone, setPhone] = useState('');
     const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -136,7 +139,7 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
 
     const handleProceedToConfirm = () => {
         if (!phone.match(/^[0-9]{7,11}$/)) {
-            alert(t('productFlow.deliveryModal.alertInvalidPhone'));
+            showNotification(t('productFlow.deliveryModal.alertInvalidPhone'), 'error');
             return;
         }
         setShowPhoneModal(false);

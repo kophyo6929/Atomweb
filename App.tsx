@@ -10,6 +10,7 @@ import AdminPanel from './AdminPanel';
 import FAQView from './FAQView';
 import UserProfileView from './UserProfileView';
 import { useLanguage } from './i18n';
+import { LoadingSpinner } from './components';
 
 const initialPaymentDetails: PaymentAccountDetails = {
     'KPay': { name: 'ATOM Point Admin', number: '09 987 654 321' },
@@ -19,6 +20,7 @@ const initialPaymentDetails: PaymentAccountDetails = {
 const App = () => {
   const { t } = useLanguage();
   // State Management
+  const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState('DASHBOARD');
@@ -31,6 +33,30 @@ const App = () => {
   // Site-wide editable settings
   const [paymentDetails, setPaymentDetails] = useState<PaymentAccountDetails>(initialPaymentDetails);
   const [adminContact, setAdminContact] = useState('https://t.me/CEO_METAVERSE');
+
+  // Effect to restore session on initial load
+  useEffect(() => {
+    try {
+        const storedUser = sessionStorage.getItem('currentUser');
+        const storedView = sessionStorage.getItem('currentView');
+
+        if (storedUser) {
+            const user: User = JSON.parse(storedUser);
+            // Quick check to ensure the user still exists in our mock DB
+            if (initialUsers.some(u => u.id === user.id)) {
+                setCurrentUser(user);
+                setIsLoggedIn(true);
+                setCurrentView(storedView || 'DASHBOARD');
+            }
+        }
+    } catch (error) {
+        console.error("Failed to parse session storage:", error);
+        sessionStorage.clear(); // Clear corrupted storage
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
 
   // Effect to manage body class for dynamic backgrounds
   useEffect(() => {
@@ -52,6 +78,7 @@ const App = () => {
       const updatedUser = users.find(u => u.id === currentUser.id);
       if (updatedUser) {
         setCurrentUser(updatedUser);
+        sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
       } else {
         // The user was deleted, log them out
         handleLogout();
@@ -80,6 +107,8 @@ const App = () => {
         setCurrentUser(user);
         setIsLoggedIn(true);
         setCurrentView('DASHBOARD');
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        sessionStorage.setItem('currentView', 'DASHBOARD');
     } else {
         alert(t('app.alerts.invalidCredentials'));
     }
@@ -110,6 +139,8 @@ const App = () => {
     setCurrentUser(newUser);
     setIsLoggedIn(true);
     setCurrentView('DASHBOARD');
+    sessionStorage.setItem('currentUser', JSON.stringify(newUser));
+    sessionStorage.setItem('currentView', 'DASHBOARD');
     alert(t('app.alerts.registrationSuccess', { id: newUser.id }));
   };
 
@@ -122,6 +153,8 @@ const App = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setIsLoggedIn(false);
+    sessionStorage.removeItem('currentUser');
+    sessionStorage.removeItem('currentView');
   };
 
   const handleBroadcast = (message: string, targetIds: number[]) => {
@@ -156,7 +189,10 @@ const App = () => {
     }
   };
   
-  const navigateTo = (view: string) => setCurrentView(view);
+  const navigateTo = (view: string) => {
+    setCurrentView(view);
+    sessionStorage.setItem('currentView', view);
+  };
 
   // --- View Renderer --- //
   const renderView = () => {
@@ -192,6 +228,10 @@ const App = () => {
         return <Dashboard user={currentUser} onNavigate={navigateTo} onLogout={handleLogout} adminContact={adminContact} />;
     }
   };
+  
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <>

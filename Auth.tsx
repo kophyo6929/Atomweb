@@ -5,9 +5,10 @@ import { useLanguage } from './i18n';
 
 // --- AUTHENTICATION COMPONENTS --- //
 
-const TelegramIcon = () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" height="1em" width="1em">
-        <path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.17.91-.494 1.208-.822 1.23-.696.047-1.225-.46-1.9- .902-1.018-.65-1.58-1.027-2.597-1.677-.945-.608-.34-.942.235-1.505.14-.135.253-.252.36-.363.632-.638 1.267-1.278 1.13-1.333-.136-.055-.465.137-.67.27-.43.27-1.023.636-1.53.921-.57.317-.99.46-1.29.432-.46-.054-1.09-.2-1.64-.365-1.02-.31-1.83-.485-1.74-.973.03-.19.31-.38.76-.571 2.25-1.001 3.81-1.754 4.82-2.26 1.7-.84 2.12-1.01 2.37-1.011z" />
+const HelpIcon = () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 0h24v24H0z" fill="none"/>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
     </svg>
 );
 
@@ -35,7 +36,7 @@ const AuthPage = ({ onLoginSuccess, onRegisterSuccess, onPasswordReset, users, a
           <RegisterForm onToggleView={toggleView} onRegisterSuccess={onRegisterSuccess} />
         )}
         <a href={adminContact} target="_blank" rel="noopener noreferrer" className="contact-admin-link">
-            <TelegramIcon />
+            <HelpIcon />
             <span>{t('auth.contactAdmin')}</span>
         </a>
       </div>

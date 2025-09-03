@@ -3,6 +3,7 @@ import { User, Order, PaymentAccountDetails } from './types';
 import { MMK_PER_CREDIT } from './utils';
 import { Logo } from './components';
 import { useLanguage } from './i18n';
+import { useNotification } from './NotificationContext';
 
 interface BuyCreditsViewProps {
     user: User;
@@ -15,6 +16,7 @@ interface BuyCreditsViewProps {
 
 const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, paymentAccountDetails }: BuyCreditsViewProps) => {
     const { t } = useLanguage();
+    const { showNotification } = useNotification();
     const [step, setStep] = useState(1); // 1: amount, 2: method, 3: upload
     const [amountMMK, setAmountMMK] = useState('');
     const [paymentMethod, setPaymentMethod] = useState(''); // 'KPay' or 'Wave Pay'
@@ -33,7 +35,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
         if (parseFloat(amountMMK) > 0) {
             setStep(2);
         } else {
-            alert(t('buyCredits.alerts.invalidAmount'));
+            showNotification(t('buyCredits.alerts.invalidAmount'), 'error');
         }
     };
 
@@ -59,7 +61,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
     
     const handleSubmitRequest = () => {
         if (!paymentProof) {
-            alert(t('buyCredits.alerts.noProof'));
+            showNotification(t('buyCredits.alerts.noProof'), 'error');
             return;
         }
         const creditAmount = parseFloat(amountMMK) / MMK_PER_CREDIT;
@@ -80,7 +82,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
         const notificationMessage = `💰 Credit Request: ${user.username} requests ${parseFloat(amountMMK).toLocaleString()} MMK via ${paymentMethod}.`;
         onAdminNotify(notificationMessage);
 
-        alert(t('buyCredits.alerts.requestSubmitted'));
+        showNotification(t('notifications.orderSuccess'), 'success');
         onNavigate('MY_ORDERS');
     };
 

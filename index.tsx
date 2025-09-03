@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { LanguageProvider } from './i18n';
+import { NotificationProvider } from './NotificationContext';
 
 // --- RENDER APP --- //
 const container = document.getElementById('root');
@@ -10,7 +11,9 @@ if (container) {
     root.render(
       <React.StrictMode>
         <LanguageProvider>
-          <App />
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
         </LanguageProvider>
       </React.StrictMode>
     );
