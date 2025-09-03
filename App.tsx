@@ -86,16 +86,6 @@ const App = () => {
     }
   }, [users]);
 
-  // Effect to request notification permission for admin
-  useEffect(() => {
-    if (currentUser && currentUser.isAdmin) {
-      if ("Notification" in window && Notification.permission !== "denied") {
-        Notification.requestPermission();
-      }
-    }
-  }, [currentUser]);
-
-
   const handleLoginSuccess = (username: string, password?: string) => {
     // In a real app, never handle passwords on the client side like this.
     const user = users.find(u => u.username === username && u.password === password);
@@ -183,10 +173,9 @@ const App = () => {
       })
     );
 
-    // If the currently logged-in user is the admin and has granted permission, show a browser notification
-    if (currentUser?.id === ADMIN_ID && "Notification" in window && Notification.permission === "granted") {
-      new Notification("Atom Point Admin Alert", { body: message });
-    }
+    // The native browser Notification API was causing crashes in restrictive
+    // webview environments. It has been removed to ensure app stability.
+    // The in-app notification system still works for the admin.
   };
   
   const navigateTo = (view: string) => {
