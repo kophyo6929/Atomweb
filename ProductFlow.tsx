@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ProductsData, ProductItem, User, Order } from './types';
 import { calculateCreditCost } from './utils';
 import { Logo, EmptyState } from './components';
+import { useLanguage } from './i18n';
 
 // --- PRODUCT BROWSE & PURCHASE FLOW --- //
 
@@ -13,9 +14,11 @@ interface ProductFlowProps {
     setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
+    onAdminNotify: (message: string) => void;
 }
 
-const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers }: ProductFlowProps) => {
+const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers, onAdminNotify }: ProductFlowProps) => {
+    const { t } = useLanguage();
     const [step, setStep] = useState('OPERATOR'); // OPERATOR, CATEGORY, LIST
     const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -44,7 +47,7 @@ const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers }
         const cost = calculateCreditCost(product.price_mmk);
 
         if (user.credits < cost) {
-            alert("You do not have enough credits for this purchase.");
+            alert(t('productFlow.confirmModal.alertNotEnoughCredits'));
             return;
         }
 
@@ -64,20 +67,31 @@ const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers }
         };
         setOrders([...orders, newOrder]);
         
-        alert(`Your order for ${product.name} has been submitted. ${cost.toFixed(2)} C have been deducted and will be refunded if the order is declined.`);
+        // Send notification to Admin
+        const notificationMessage = `📦 New Order: ${user.username} bought ${product.name} for ${deliveryInfo}.`;
+        onAdminNotify(notificationMessage);
+
+        alert(t('productFlow.confirmModal.alertOrderSubmitted', { productName: product.name, cost: cost.toFixed(2) }));
         onNavigate('DASHBOARD');
+    };
+
+    const getHeaderText = () => {
+        if (step === 'OPERATOR') return t('productFlow.headerSelectOperator');
+        if (step === 'CATEGORY' && selectedOperator) return t('productFlow.headerOperator', { operator: selectedOperator });
+        if (step === 'LIST' && selectedCategory) return t('productFlow.headerCategory', { category: selectedCategory });
+        return '';
     };
 
     return (
         <div className="product-flow-container">
             <header className="dashboard-header">
                 <Logo />
-                <button onClick={() => onNavigate('DASHBOARD')} className="logout-button">Back to Dashboard</button>
+                <button onClick={() => onNavigate('DASHBOARD')} className="logout-button">{t('common.backToDashboard')}</button>
             </header>
             <main className="dashboard-main">
                 <div className="nav-header">
-                    <button onClick={goBack} className="back-button">← Back</button>
-                    <h3>{step === 'OPERATOR' ? 'Select Operator' : step === 'CATEGORY' ? `Operator: ${selectedOperator}` : `Category: ${selectedCategory}`}</h3>
+                    <button onClick={goBack} className="back-button">← {t('common.back')}</button>
+                    <h3>{getHeaderText()}</h3>
                 </div>
                 {step === 'OPERATOR' && <OperatorList operators={Object.keys(products)} onSelect={selectOperator} />}
                 {step === 'CATEGORY' && selectedOperator && <CategoryList categories={Object.keys(products[selectedOperator])} onSelect={selectCategory} />}
@@ -108,6 +122,7 @@ interface ProductListProps {
 }
 
 const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
+    const { t } = useLanguage();
     const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
     const [phone, setPhone] = useState('');
     const [showPhoneModal, setShowPhoneModal] = useState(false);
@@ -121,7 +136,7 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
 
     const handleProceedToConfirm = () => {
         if (!phone.match(/^[0-9]{7,11}$/)) {
-            alert('Please enter a valid phone number.');
+            alert(t('productFlow.deliveryModal.alertInvalidPhone'));
             return;
         }
         setShowPhoneModal(false);
@@ -150,7 +165,7 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
         <>
             <input 
                 type="text"
-                placeholder="Search products in this category..."
+                placeholder={t('productFlow.searchInputPlaceholder')}
                 className="search-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -165,26 +180,26 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
                                 {p.extra && <p className="product-extra">{p.extra}</p>}
                                 <p>{p.price_mmk.toLocaleString()} MMK / {calculateCreditCost(p.price_mmk).toFixed(2)} C</p>
                             </div>
-                            <button onClick={() => handleBuyClick(p)} className="buy-button">Buy</button>
+                            <button onClick={() => handleBuyClick(p)} className="buy-button">{t('productFlow.buyButton')}</button>
                         </div>
-                    )) : <EmptyState message="No products found" subMessage="Your search did not match any products." />
+                    )) : <EmptyState message={t('common.noItemsFound')} subMessage={t('productFlow.searchInputPlaceholder')} />
                 ) : (
-                    <EmptyState message="No products in this category" subMessage="An admin may need to add products here." />
+                    <EmptyState message={t('productFlow.emptyCategory')} subMessage={t('productFlow.emptyCategorySub')} />
                 )}
             </div>
 
             {showPhoneModal && selectedProduct && (
                  <div className="modal-backdrop">
                     <div className="modal-content">
-                        <h3>Delivery Information</h3>
-                        <p>Please enter the phone number to deliver <strong>{selectedProduct.name}</strong> to.</p>
+                        <h3>{t('productFlow.deliveryModal.title')}</h3>
+                        <p>{t('productFlow.deliveryModal.description', { productName: selectedProduct.name })}</p>
                         <div className="input-group">
-                            <label htmlFor="phone">Phone Number</label>
-                            <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input-field" placeholder="e.g., 09xxxxxxxxx" />
+                            <label htmlFor="phone">{t('productFlow.deliveryModal.phoneLabel')}</label>
+                            <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input-field" placeholder={t('productFlow.deliveryModal.phonePlaceholder')} />
                         </div>
                         <div className="modal-actions">
-                            <button onClick={closeModals} className="button-secondary">Cancel</button>
-                            <button onClick={handleProceedToConfirm} className="submit-button">Proceed</button>
+                            <button onClick={closeModals} className="button-secondary">{t('common.cancel')}</button>
+                            <button onClick={handleProceedToConfirm} className="submit-button">{t('productFlow.deliveryModal.proceedButton')}</button>
                         </div>
                     </div>
                 </div>
@@ -193,18 +208,18 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
             {showConfirmModal && selectedProduct && (
                  <div className="modal-backdrop">
                     <div className="modal-content">
-                        <h3>Confirm Your Purchase</h3>
+                        <h3>{t('productFlow.confirmModal.title')}</h3>
                         <div className="confirmation-summary">
-                            <p><span>Product:</span> <strong>{selectedProduct.name}</strong></p>
-                            <p><span>Deliver to:</span> <strong>{phone}</strong></p>
-                            <p><span>Cost:</span> <strong className="yellow-text">{calculateCreditCost(selectedProduct.price_mmk).toFixed(2)} C</strong></p>
+                            <p><span>{t('productFlow.confirmModal.product')}</span> <strong>{selectedProduct.name}</strong></p>
+                            <p><span>{t('productFlow.confirmModal.deliverTo')}</span> <strong>{phone}</strong></p>
+                            <p><span>{t('productFlow.confirmModal.cost')}</span> <strong className="yellow-text">{calculateCreditCost(selectedProduct.price_mmk).toFixed(2)} C</strong></p>
                             <hr />
-                            <p><span>Your Balance:</span> {user.credits.toFixed(2)} C</p>
-                            <p><span>Balance After:</span> <strong className="yellow-text">{(user.credits - calculateCreditCost(selectedProduct.price_mmk)).toFixed(2)} C</strong></p>
+                            <p><span>{t('productFlow.confirmModal.yourBalance')}</span> {user.credits.toFixed(2)} C</p>
+                            <p><span>{t('productFlow.confirmModal.balanceAfter')}</span> <strong className="yellow-text">{(user.credits - calculateCreditCost(selectedProduct.price_mmk)).toFixed(2)} C</strong></p>
                         </div>
                         <div className="modal-actions">
-                            <button onClick={closeModals} className="button-secondary">Cancel</button>
-                            <button onClick={handleConfirmPurchase} className="submit-button">Confirm Purchase</button>
+                            <button onClick={closeModals} className="button-secondary">{t('common.cancel')}</button>
+                            <button onClick={handleConfirmPurchase} className="submit-button">{t('productFlow.confirmModal.confirmButton')}</button>
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ProductsData, User, Order, ProductItem } from './types';
+import { ProductsData, User, Order, ProductItem, PaymentAccountDetails } from './types';
 import { MMK_PER_CREDIT } from './utils';
 import { Logo, CollapsibleSection, EmptyState } from './components';
 
@@ -13,25 +13,39 @@ interface AdminPanelProps {
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     orders: Order[];
     setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+    onBroadcast: (message: string, targetIds: number[]) => void;
+    currentUser: User;
+    onLogout: () => void;
+    paymentDetails: PaymentAccountDetails;
+    setPaymentDetails: React.Dispatch<React.SetStateAction<PaymentAccountDetails>>;
+    adminContact: string;
+    setAdminContact: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const AdminPanel = ({ onNavigate, products, setProducts, users, setUsers, orders, setOrders }: AdminPanelProps) => {
+const AdminPanel = (props: AdminPanelProps) => {
+    const { onNavigate, currentUser, onLogout } = props;
     const [adminView, setAdminView] = useState('DASHBOARD');
     
     const renderAdminView = () => {
         switch (adminView) {
             case 'PRODUCTS':
-                return <AdminManageProducts products={products} setProducts={setProducts} />;
+                return <AdminManageProducts {...props} />;
             case 'USERS':
-                return <AdminManageUsers users={users} setUsers={setUsers} />;
+                return <AdminManageUsers {...props} />;
             case 'ORDERS':
-                return <AdminViewAllOrders orders={orders} users={users} setOrders={setOrders} setUsers={setUsers} />;
+                return <AdminViewAllOrders {...props} />;
+            case 'BROADCAST':
+                return <AdminBroadcast {...props} />;
+            case 'SETTINGS':
+                return <AdminSiteSettings {...props} />;
             default:
                 return (
                     <div className="action-cards">
-                        <div className="card" onClick={() => setAdminView('PRODUCTS')}><h3>📦 Manage Products</h3></div>
-                        <div className="card" onClick={() => setAdminView('USERS')}><h3>👤 Manage Users</h3></div>
-                        <div className="card" onClick={() => setAdminView('ORDERS')}><h3>📊 View All Orders</h3></div>
+                        <div className="card" onClick={() => setAdminView('PRODUCTS')}><h3>📦 Manage Products</h3><p>Add, edit, or delete products.</p></div>
+                        <div className="card" onClick={() => setAdminView('USERS')}><h3>👤 Manage Users</h3><p>Adjust credits, ban, and view users.</p></div>
+                        <div className="card" onClick={() => setAdminView('ORDERS')}><h3>📊 View All Orders</h3><p>Approve or decline all orders.</p></div>
+                        <div className="card" onClick={() => setAdminView('BROADCAST')}><h3>📢 Broadcasts</h3><p>Send messages to users.</p></div>
+                        <div className="card" onClick={() => setAdminView('SETTINGS')}><h3>⚙️ Site Settings</h3><p>Edit payment details and contact info.</p></div>
                     </div>
                 );
         }
@@ -235,15 +249,31 @@ const ProductEditModal: React.FC<{
     );
 };
 
-const AdminManageUsers: React.FC<{ users: User[], setUsers: React.Dispatch<React.SetStateAction<User[]>> }> = ({ users, setUsers }) => {
-    const adjustCredits = (userId: number, currentCredits: number) => {
-        const amountStr = prompt(`Adjust credits for user ${userId}.\nCurrent: ${currentCredits.toFixed(2)}\nEnter amount to add (e.g., 50 or -10):`);
-        if (amountStr === null) return;
-        const amount = parseFloat(amountStr);
-        if (isNaN(amount)) { alert('Invalid amount.'); return; }
-        setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, credits: u.credits + amount } : u));
-        alert('Credits updated.');
-    };
+const AdminManageUsers: React.FC<{ 
+    users: User[], 
+    setUsers: React.Dispatch<React.SetStateAction<User[]>>,
+    setOrders: React.Dispatch<React.SetStateAction<Order[]>>,
+    currentUser: User,
+    onLogout: () => void,
+}> = ({ users, setUsers, setOrders, currentUser, onLogout }) => {
+    // BUG FIX: Instead of storing the whole user object in state (which can become stale),
+    // store only the ID. This avoids the need for a complex useEffect to sync state and
+    // prevents the infinite loop that was blocking UI updates.
+    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+
+    // Derive the selected user from props on every render. This ensures the data is always fresh.
+    const selectedUser = users.find(u => u.id === selectedUserId);
+    
+    if (selectedUser) {
+        return <AdminManageUserDetailView 
+            user={selectedUser} 
+            onBack={() => setSelectedUserId(null)}
+            setUsers={setUsers}
+            setOrders={setOrders}
+            currentUser={currentUser}
+            onLogout={onLogout}
+        />
+    }
 
     return (
         <div>
@@ -251,15 +281,18 @@ const AdminManageUsers: React.FC<{ users: User[], setUsers: React.Dispatch<React
             {users.length > 0 ? (
                  <div className="admin-table-container">
                     <table className="admin-table">
-                        <thead><tr><th>ID</th><th>Username</th><th>Admin?</th><th>Credits</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>ID</th><th>Username</th><th>Admin?</th><th>Banned?</th><th>Credits</th><th>Actions</th></tr></thead>
                         <tbody>
                             {users.map(u => (
                                 <tr key={u.id}>
                                     <td>{u.id}</td>
                                     <td>{u.username}</td>
                                     <td>{u.isAdmin ? 'Yes' : 'No'}</td>
+                                    <td>{u.banned ? 'Yes' : 'No'}</td>
                                     <td>{u.credits.toFixed(2)}</td>
-                                    <td><button onClick={() => adjustCredits(u.id, u.credits)} className="button-secondary">Adjust Credits</button></td>
+                                    <td className="admin-actions">
+                                        <button onClick={() => setSelectedUserId(u.id)} className="button-secondary">Manage</button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -268,6 +301,237 @@ const AdminManageUsers: React.FC<{ users: User[], setUsers: React.Dispatch<React
             ) : (
                 <EmptyState message="No users found" />
             )}
+        </div>
+    );
+};
+
+const AdjustCreditsModal: React.FC<{
+    user: User,
+    onConfirm: (amount: number) => void,
+    onCancel: () => void,
+}> = ({ user, onConfirm, onCancel }) => {
+    const [amountStr, setAmountStr] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const amount = parseFloat(amountStr);
+        if (isNaN(amount)) {
+            alert('Invalid amount.');
+            return;
+        }
+        onConfirm(amount);
+    };
+
+    return (
+        <div className="modal-backdrop">
+            <div className="modal-content">
+                <h3>Adjust Credits for {user.username}</h3>
+                <p>Send the amount to add or remove (e.g., 50 to add, -10 to remove).</p>
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="input-group">
+                        <label htmlFor="credit-amount">Amount</label>
+                        <input
+                            id="credit-amount"
+                            type="number"
+                            step="any"
+                            value={amountStr}
+                            onChange={(e) => setAmountStr(e.target.value)}
+                            className="input-field"
+                            placeholder="e.g., 50 or -10"
+                            required
+                            autoFocus
+                        />
+                    </div>
+                    <div className="modal-actions">
+                        <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+                        <button type="submit" className="submit-button">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const BanConfirmationModal: React.FC<{
+    user: User,
+    onConfirm: () => void,
+    onCancel: () => void,
+}> = ({ user, onConfirm, onCancel }) => {
+    const action = user.banned ? 'Unban' : 'Ban';
+
+    return (
+        <div className="modal-backdrop">
+            <div className="modal-content">
+                <h3>Confirm Action</h3>
+                <p>Are you sure you want to <strong>{action}</strong> the user <strong>{user.username}</strong>?</p>
+                {action === 'Ban' && <p>This will prevent them from logging in and their username cannot be re-registered.</p>}
+                {action === 'Unban' && <p>This will allow them to log in again.</p>}
+                <div className="modal-actions">
+                    <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+                    <button onClick={onConfirm} className={action === 'Ban' ? 'button-danger' : 'button-success'} style={{padding: '0.75rem 1.5rem'}}>{action} User</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const AdminManageUserDetailView: React.FC<{
+    user: User,
+    onBack: () => void,
+    setUsers: React.Dispatch<React.SetStateAction<User[]>>,
+    setOrders: React.Dispatch<React.SetStateAction<Order[]>>,
+    currentUser: User,
+    onLogout: () => void,
+}> = ({ user, onBack, setUsers, setOrders, currentUser, onLogout }) => {
+    const [showPurgeModal, setShowPurgeModal] = useState(false);
+    const [isAdjustingCredits, setIsAdjustingCredits] = useState(false);
+    const [showBanConfirm, setShowBanConfirm] = useState(false);
+
+    const handleConfirmAdjustCredits = (amount: number) => {
+        setUsers(prevUsers => prevUsers.map(u => u.id === user.id ? { ...u, credits: u.credits + amount } : u));
+        alert(`✅ Success! Credits for user ${user.id} adjusted by ${amount}.`);
+        setIsAdjustingCredits(false);
+    };
+
+    const handleConfirmBan = () => {
+        const actioned = user.banned ? 'unbanned' : 'banned';
+        setUsers(prevUsers => prevUsers.map(u => u.id === user.id ? { ...u, banned: !u.banned } : u));
+        alert(`✅ Success! User ${user.id} has been ${actioned}.`);
+        setShowBanConfirm(false);
+    };
+    
+    const handlePurge = () => {
+        // Remove the user
+        setUsers(prevUsers => prevUsers.filter(u => u.id !== user.id));
+        // Remove all orders associated with the user
+        setOrders(prevOrders => prevOrders.filter(o => o.userId !== user.id));
+        
+        alert(`User ${user.username} and all their data has been purged.`);
+        
+        // If the admin purged themselves, log them out
+        if (currentUser.id === user.id) {
+            onLogout();
+        } else {
+            onBack();
+        }
+    };
+
+    return (
+        <div className="admin-user-detail-container">
+             <div className="user-info-header">
+                <h3>👤 Managing User: {user.username} ({user.id})</h3>
+                <div className="user-info-details">
+                    <p>💰 Credits: <span>{user.credits.toFixed(2)}</span></p>
+                    <p>🚫 Banned: <span>{user.banned ? 'Yes' : 'No'}</span></p>
+                </div>
+            </div>
+
+            <div className="user-action-button-list">
+                <button className="user-action-button" onClick={() => setIsAdjustingCredits(true)}>💰 Adjust Credits</button>
+                <button className={`user-action-button ${!user.banned ? 'danger' : ''}`} onClick={() => setShowBanConfirm(true)}>🚫 {user.banned ? 'Unban User' : 'Ban User'}</button>
+                <button className="user-action-button danger darker" onClick={() => setShowPurgeModal(true)}>🗑️ Purge User Data</button>
+                <button className="user-action-button" onClick={onBack}>⬅️ Back</button>
+            </div>
+
+            {isAdjustingCredits && <AdjustCreditsModal user={user} onConfirm={handleConfirmAdjustCredits} onCancel={() => setIsAdjustingCredits(false)} />}
+            {showBanConfirm && <BanConfirmationModal user={user} onConfirm={handleConfirmBan} onCancel={() => setShowBanConfirm(false)} />}
+            {showPurgeModal && <PurgeConfirmationModal user={user} onConfirm={handlePurge} onCancel={() => setShowPurgeModal(false)} />}
+        </div>
+    );
+};
+
+const PurgeConfirmationModal: React.FC<{user: User, onConfirm: () => void, onCancel: () => void}> = ({ user, onConfirm, onCancel }) => {
+    const [confirmText, setConfirmText] = useState('');
+    const canConfirm = confirmText === user.username;
+
+    return (
+        <div className="modal-backdrop">
+            <div className="modal-content purge-confirmation">
+                <h3>⚠️ Purge User Data</h3>
+                <p>This is an irreversible action. It will permanently delete the user <strong>{user.username}</strong> and all of their associated orders and data.</p>
+                <p>To confirm, please type the user's username below:</p>
+                <div className="input-group">
+                    <label htmlFor="purge-confirm-text">Username</label>
+                    <input id="purge-confirm-text" type="text" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} className="input-field" />
+                </div>
+                <div className="modal-actions">
+                    <button onClick={onCancel} className="button-secondary">Cancel</button>
+                    <button onClick={onConfirm} className="button-danger" disabled={!canConfirm} style={{padding: '0.75rem 1.5rem'}}>Purge Data</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+const AdminBroadcast: React.FC<{ users: User[], onBroadcast: (message: string, targetIds: number[]) => void }> = ({ users, onBroadcast }) => {
+    const [message, setMessage] = useState('');
+    const [target, setTarget] = useState('all'); // 'all' or 'specific'
+    const [specificIds, setSpecificIds] = useState('');
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!message.trim()) {
+            alert('Message cannot be empty.');
+            return;
+        }
+
+        let targetUserIds: number[] = [];
+        if (target === 'all') {
+            targetUserIds = users.map(u => u.id);
+        } else {
+            targetUserIds = specificIds.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+            if (targetUserIds.length === 0) {
+                alert('Please enter at least one valid User ID.');
+                return;
+            }
+        }
+        
+        onBroadcast(message, targetUserIds);
+        setMessage('');
+        setSpecificIds('');
+    };
+
+    return (
+        <div>
+            <h2>Send Broadcast</h2>
+            <div className="broadcast-container">
+                <form className="broadcast-form" onSubmit={handleSubmit}>
+                    <div className="input-group">
+                        <label htmlFor="broadcast-message">Message</label>
+                        <textarea 
+                            id="broadcast-message" 
+                            className="textarea-field" 
+                            value={message}
+                            onChange={e => setMessage(e.target.value)}
+                            placeholder="Your message to users..."
+                            required
+                        />
+                    </div>
+                    <div className="input-group">
+                        <label>Target Users</label>
+                        <div className="targeting-options">
+                            <label><input type="radio" name="target" value="all" checked={target === 'all'} onChange={() => setTarget('all')} /> All Users</label>
+                            <label><input type="radio" name="target" value="specific" checked={target === 'specific'} onChange={() => setTarget('specific')} /> Specific Users</label>
+                        </div>
+                    </div>
+                    {target === 'specific' && (
+                         <div className="input-group">
+                            <label htmlFor="specific-ids">User IDs (comma-separated)</label>
+                            <input 
+                                id="specific-ids" 
+                                type="text"
+                                className="input-field" 
+                                value={specificIds}
+                                onChange={e => setSpecificIds(e.target.value)}
+                                placeholder="e.g., 123456, 987654"
+                            />
+                        </div>
+                    )}
+                    <button type="submit" className="submit-button">Send Broadcast</button>
+                </form>
+            </div>
         </div>
     );
 };
@@ -381,5 +645,66 @@ const AdminViewAllOrders: React.FC<{
         </div>
     );
 };
+
+const AdminSiteSettings: React.FC<{
+    paymentDetails: PaymentAccountDetails,
+    setPaymentDetails: React.Dispatch<React.SetStateAction<PaymentAccountDetails>>,
+    adminContact: string,
+    setAdminContact: React.Dispatch<React.SetStateAction<string>>
+}> = ({ paymentDetails, setPaymentDetails, adminContact, setAdminContact }) => {
+    
+    const [localDetails, setLocalDetails] = useState(paymentDetails);
+    const [localContact, setLocalContact] = useState(adminContact);
+
+    const handleDetailChange = (method: string, field: 'name' | 'number', value: string) => {
+        setLocalDetails(prev => ({
+            ...prev,
+            [method]: { ...prev[method], [field]: value }
+        }));
+    };
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setPaymentDetails(localDetails);
+        setAdminContact(localContact);
+        alert('Site settings have been updated successfully!');
+    };
+
+    return (
+        <div>
+            <h2>Site Settings</h2>
+            <div className="settings-container">
+                <form className="settings-form" onSubmit={handleSubmit}>
+                    <h3>Payment Accounts</h3>
+                    <div className="input-group">
+                        <label htmlFor="kpay-name">KPay Account Name</label>
+                        <input id="kpay-name" type="text" className="input-field" value={localDetails['KPay']?.name || ''} onChange={e => handleDetailChange('KPay', 'name', e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                        <label htmlFor="kpay-number">KPay Account Number</label>
+                        <input id="kpay-number" type="text" className="input-field" value={localDetails['KPay']?.number || ''} onChange={e => handleDetailChange('KPay', 'number', e.target.value)} />
+                    </div>
+                    <div className="input-group">
+                        <label htmlFor="wave-name">Wave Pay Account Name</label>
+                        <input id="wave-name" type="text" className="input-field" value={localDetails['Wave Pay']?.name || ''} onChange={e => handleDetailChange('Wave Pay', 'name', e.target.value)} />
+                    </div>
+                     <div className="input-group">
+                        <label htmlFor="wave-number">Wave Pay Account Number</label>
+                        <input id="wave-number" type="text" className="input-field" value={localDetails['Wave Pay']?.number || ''} onChange={e => handleDetailChange('Wave Pay', 'number', e.target.value)} />
+                    </div>
+                    
+                    <h3>Support & Contact</h3>
+                    <div className="input-group">
+                        <label htmlFor="admin-contact">Admin Contact URL</label>
+                        <input id="admin-contact" type="text" className="input-field" value={localContact} onChange={e => setLocalContact(e.target.value)} />
+                    </div>
+
+                    <button type="submit" className="submit-button">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 
 export default AdminPanel;

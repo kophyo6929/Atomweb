@@ -1,18 +1,28 @@
 import React, { useState } from 'react';
 import { Logo } from './components';
 import { User } from './types';
+import { useLanguage } from './i18n';
 
 // --- AUTHENTICATION COMPONENTS --- //
+
+const TelegramIcon = () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" height="1em" width="1em">
+        <path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.17.91-.494 1.208-.822 1.23-.696.047-1.225-.46-1.9- .902-1.018-.65-1.58-1.027-2.597-1.677-.945-.608-.34-.942.235-1.505.14-.135.253-.252.36-.363.632-.638 1.267-1.278 1.13-1.333-.136-.055-.465.137-.67.27-.43.27-1.023.636-1.53.921-.57.317-.99.46-1.29.432-.46-.054-1.09-.2-1.64-.365-1.02-.31-1.83-.485-1.74-.973.03-.19.31-.38.76-.571 2.25-1.001 3.81-1.754 4.82-2.26 1.7-.84 2.12-1.01 2.37-1.011z" />
+    </svg>
+);
+
 
 interface AuthProps {
     onLoginSuccess: (username: string, password?: string) => void;
     onRegisterSuccess: (username: string, password: string, securityAmount: number) => void;
     onPasswordReset: (userId: number, newPassword: string) => void;
     users: User[];
+    adminContact: string;
 }
 
-const AuthPage = ({ onLoginSuccess, onRegisterSuccess, onPasswordReset, users }: AuthProps) => {
+const AuthPage = ({ onLoginSuccess, onRegisterSuccess, onPasswordReset, users, adminContact }: AuthProps) => {
   const [isLoginView, setIsLoginView] = useState(true);
+  const { t } = useLanguage();
   const toggleView = () => setIsLoginView(!isLoginView);
 
   return (
@@ -24,6 +34,10 @@ const AuthPage = ({ onLoginSuccess, onRegisterSuccess, onPasswordReset, users }:
         ) : (
           <RegisterForm onToggleView={toggleView} onRegisterSuccess={onRegisterSuccess} />
         )}
+        <a href={adminContact} target="_blank" rel="noopener noreferrer" className="contact-admin-link">
+            <TelegramIcon />
+            <span>{t('auth.contactAdmin')}</span>
+        </a>
       </div>
     </div>
   );
@@ -36,6 +50,7 @@ interface ForgotPasswordModalProps {
 }
 
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, users, onPasswordReset }) => {
+    const { t } = useLanguage();
     const [step, setStep] = useState<'verify' | 'reset'>('verify');
     const [userIdInput, setUserIdInput] = useState('');
     const [securityAmountInput, setSecurityAmountInput] = useState('');
@@ -50,7 +65,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, user
         const amount = parseInt(securityAmountInput, 10);
 
         if (isNaN(id) || isNaN(amount)) {
-            alert('Please enter valid numbers for User ID and Security Amount.');
+            alert(t('auth.forgotPasswordModal.alerts.invalidInput'));
             return;
         }
 
@@ -60,7 +75,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, user
             setVerifiedUser(user);
             setStep('reset');
         } else {
-            alert('Invalid User ID or Security Amount. Please try again.');
+            alert(t('auth.forgotPasswordModal.alerts.invalidCredentials'));
         }
     };
 
@@ -69,17 +84,17 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, user
         if (!verifiedUser) return;
 
         if (!newPassword || newPassword.length < 6) {
-             alert('Password must be at least 6 characters long.');
+             alert(t('auth.resetPasswordModal.alerts.passwordTooShort'));
              return;
         }
 
         if (newPassword !== confirmPassword) {
-            alert("Passwords don't match!");
+            alert(t('auth.resetPasswordModal.alerts.passwordsDontMatch'));
             return;
         }
         
         onPasswordReset(verifiedUser.id, newPassword);
-        alert(`Password for ${verifiedUser.username} has been reset successfully!\nYou can now log in with your new password.`);
+        alert(t('auth.resetPasswordModal.alerts.passwordResetSuccess', { username: verifiedUser.username }));
         onClose();
     };
 
@@ -89,39 +104,39 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ onClose, user
             <div className="modal-content">
                 {step === 'verify' ? (
                 <>
-                    <h3>Forgot Password</h3>
-                    <p>Enter your 6-digit User ID and 4-digit security amount to recover your account.</p>
+                    <h3>{t('auth.forgotPasswordModal.title')}</h3>
+                    <p>{t('auth.forgotPasswordModal.description')}</p>
                     <form onSubmit={handleVerifySubmit} className="auth-form">
                         <div className="input-group">
-                            <label htmlFor="recovery-userid">User ID</label>
-                            <input id="recovery-userid" className="input-field" type="number" value={userIdInput} onChange={e => setUserIdInput(e.target.value)} placeholder="6-digit ID" required />
+                            <label htmlFor="recovery-userid">{t('auth.forgotPasswordModal.userIdLabel')}</label>
+                            <input id="recovery-userid" className="input-field" type="number" value={userIdInput} onChange={e => setUserIdInput(e.target.value)} placeholder={t('auth.forgotPasswordModal.userIdPlaceholder')} required />
                         </div>
                          <div className="input-group">
-                            <label htmlFor="recovery-amount">Security Amount</label>
-                            <input id="recovery-amount" className="input-field" type="number" value={securityAmountInput} onChange={e => setSecurityAmountInput(e.target.value)} placeholder="4-digit number" required />
+                            <label htmlFor="recovery-amount">{t('auth.forgotPasswordModal.securityAmountLabel')}</label>
+                            <input id="recovery-amount" className="input-field" type="number" value={securityAmountInput} onChange={e => setSecurityAmountInput(e.target.value)} placeholder={t('auth.forgotPasswordModal.securityAmountPlaceholder')} required />
                         </div>
                         <div className="modal-actions">
-                            <button type="button" onClick={onClose} className="button-secondary">Cancel</button>
-                            <button type="submit" className="submit-button">Verify Identity</button>
+                            <button type="button" onClick={onClose} className="button-secondary">{t('common.cancel')}</button>
+                            <button type="submit" className="submit-button">{t('auth.forgotPasswordModal.verifyButton')}</button>
                         </div>
                     </form>
                 </>
                 ) : verifiedUser && (
                 <>
-                    <h3>Set New Password</h3>
-                    <p>Create a new password for user: <strong>{verifiedUser.username}</strong></p>
+                    <h3>{t('auth.resetPasswordModal.title')}</h3>
+                    <p>{t('auth.resetPasswordModal.description', { username: verifiedUser.username })}</p>
                     <form onSubmit={handleResetSubmit} className="auth-form">
                         <div className="input-group">
-                            <label htmlFor="reset-new-password">New Password</label>
-                            <input id="reset-new-password" className="input-field" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="At least 6 characters" required />
+                            <label htmlFor="reset-new-password">{t('auth.resetPasswordModal.newPasswordLabel')}</label>
+                            <input id="reset-new-password" className="input-field" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={t('auth.resetPasswordModal.newPasswordPlaceholder')} required />
                         </div>
                          <div className="input-group">
-                            <label htmlFor="reset-confirm-password">Confirm New Password</label>
+                            <label htmlFor="reset-confirm-password">{t('auth.resetPasswordModal.confirmPasswordLabel')}</label>
                             <input id="reset-confirm-password" className="input-field" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
                         </div>
                         <div className="modal-actions">
-                            <button type="button" onClick={onClose} className="button-secondary">Cancel</button>
-                            <button type="submit" className="submit-button">Set New Password</button>
+                            <button type="button" onClick={onClose} className="button-secondary">{t('common.cancel')}</button>
+                            <button type="submit" className="submit-button">{t('auth.resetPasswordModal.setNewPasswordButton')}</button>
                         </div>
                     </form>
                 </>
@@ -139,6 +154,7 @@ interface LoginFormProps {
 }
 
 const LoginForm = ({ onToggleView, onLoginSuccess, users, onPasswordReset }: LoginFormProps) => {
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -150,15 +166,15 @@ const LoginForm = ({ onToggleView, onLoginSuccess, users, onPasswordReset }: Log
 
   return (
     <>
-      <h1>Sign In</h1>
+      <h1>{t('auth.signInTitle')}</h1>
       <form className="auth-form" onSubmit={handleSubmit}>
          <div className="input-group">
-          <label htmlFor="login-username">Username</label>
-          <input id="login-username" className="input-field" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required aria-label="Username" />
+          <label htmlFor="login-username">{t('auth.usernameLabel')}</label>
+          <input id="login-username" className="input-field" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required aria-label={t('auth.usernameLabel')} />
         </div>
         <div className="input-group">
-          <label htmlFor="login-password">Password</label>
-          <input id="login-password" className="input-field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required aria-label="Password" />
+          <label htmlFor="login-password">{t('auth.passwordLabel')}</label>
+          <input id="login-password" className="input-field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required aria-label={t('auth.passwordLabel')} />
         </div>
         <div className="forgot-password-container">
             <button
@@ -166,14 +182,14 @@ const LoginForm = ({ onToggleView, onLoginSuccess, users, onPasswordReset }: Log
                 className="forgot-password-link"
                 onClick={() => setShowForgotPassword(true)}
             >
-                Forgot Password?
+                {t('auth.forgotPasswordLink')}
             </button>
         </div>
-        <button type="submit" className="submit-button">Login</button>
+        <button type="submit" className="submit-button">{t('auth.loginButton')}</button>
       </form>
       <div className="toggle-form-container">
-        <span>Don't have an account? </span>
-        <button onClick={onToggleView} className="toggle-form-link" aria-label="Switch to registration form">Register</button>
+        <span>{t('auth.registerPrompt')} </span>
+        <button onClick={onToggleView} className="toggle-form-link" aria-label="Switch to registration form">{t('auth.registerLink')}</button>
       </div>
       {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} users={users} onPasswordReset={onPasswordReset} />}
     </>
@@ -186,6 +202,7 @@ interface RegisterFormProps {
 }
 
 const RegisterForm = ({ onToggleView, onRegisterSuccess }: RegisterFormProps) => {
+  const { t } = useLanguage();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -194,12 +211,12 @@ const RegisterForm = ({ onToggleView, onRegisterSuccess }: RegisterFormProps) =>
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      alert(t('auth.resetPasswordModal.alerts.passwordsDontMatch'));
       return;
     }
     const amount = parseInt(securityAmount, 10);
     if (isNaN(amount) || securityAmount.length !== 4) {
-        alert("Please enter a valid 4-digit security amount.");
+        alert(t('auth.forgotPasswordModal.alerts.invalidInput')); // Re-using a similar alert
         return;
     }
     onRegisterSuccess(username, password, amount);
@@ -207,29 +224,29 @@ const RegisterForm = ({ onToggleView, onRegisterSuccess }: RegisterFormProps) =>
 
   return (
     <>
-      <h1>Create an Account</h1>
+      <h1>{t('auth.createAccountTitle')}</h1>
       <form className="auth-form" onSubmit={handleSubmit}>
         <div className="input-group">
-          <label htmlFor="register-username">Username</label>
-          <input id="register-username" className="input-field" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required aria-label="Username" />
+          <label htmlFor="register-username">{t('auth.usernameLabel')}</label>
+          <input id="register-username" className="input-field" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required aria-label={t('auth.usernameLabel')} />
         </div>
         <div className="input-group">
-          <label htmlFor="register-password">Password</label>
-          <input id="register-password" className="input-field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required aria-label="Password" />
+          <label htmlFor="register-password">{t('auth.passwordLabel')}</label>
+          <input id="register-password" className="input-field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required aria-label={t('auth.passwordLabel')} />
         </div>
         <div className="input-group">
-          <label htmlFor="register-confirm-password">Confirm Password</label>
-          <input id="register-confirm-password" className="input-field" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-label="Confirm Password" />
+          <label htmlFor="register-confirm-password">{t('auth.confirmPasswordLabel')}</label>
+          <input id="register-confirm-password" className="input-field" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required aria-label={t('auth.confirmPasswordLabel')} />
         </div>
         <div className="input-group">
-          <label htmlFor="register-security-amount">Security Amount</label>
-          <input id="register-security-amount" className="input-field" type="number" value={securityAmount} onChange={(e) => setSecurityAmount(e.target.value)} required aria-label="Security Amount for password recovery" placeholder="4-digit number for recovery" />
+          <label htmlFor="register-security-amount">{t('auth.securityAmountLabel')}</label>
+          <input id="register-security-amount" className="input-field" type="number" value={securityAmount} onChange={(e) => setSecurityAmount(e.target.value)} required aria-label={t('auth.securityAmountLabel')} placeholder={t('auth.securityAmountPlaceholder')} />
         </div>
-        <button type="submit" className="submit-button">Register</button>
+        <button type="submit" className="submit-button">{t('auth.registerButton')}</button>
       </form>
       <div className="toggle-form-container">
-        <span>Already have an account? </span>
-        <button onClick={onToggleView} className="toggle-form-link" aria-label="Switch to login form">Login</button>
+        <span>{t('auth.loginPrompt')} </span>
+        <button onClick={onToggleView} className="toggle-form-link" aria-label="Switch to login form">{t('auth.loginLink')}</button>
       </div>
     </>
   );

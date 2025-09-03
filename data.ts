@@ -74,8 +74,8 @@ export const initialProducts: ProductsData = {
 };
 
 export const initialUsers: User[] = [
-    { id: 123456, username: 'Tw', password: 'Kp@794628', isAdmin: true, credits: 99999.99, securityAmount: 1111 },
-    { id: 987654, username: 'user', password: 'password', isAdmin: false, credits: 125.50, securityAmount: 2222 },
+    { id: 123456, username: 'Tw', password: 'Kp@794628', isAdmin: true, credits: 99999.99, securityAmount: 1111, banned: false, notifications: ["Welcome to the new Atom Point Web!"] },
+    { id: 987654, username: 'user', password: 'password', isAdmin: false, credits: 125.50, securityAmount: 2222, banned: false, notifications: ["Welcome to the new Atom Point Web!"] },
 ];
 
 export const initialOrders: Order[] = [
@@ -83,10 +83,7 @@ export const initialOrders: Order[] = [
     { id: 'CRD-240901-8155', type: 'CREDIT', userId: 987654, product: { name: '20.00 Credits Purchase' }, cost: 2000, paymentMethod: 'KPay', paymentProof: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', status: 'Pending Approval', date: new Date(Date.now() - 86400000).toISOString() },
 ];
 
-export const paymentAccountDetails: PaymentAccountDetails = {
-    'KPay': { name: 'ATOM Point Admin', number: '09 987 654 321' },
-    'Wave Pay': { name: 'ATOM Point Services', number: '09 123 456 789' }
-};
+// Note: Payment account details are now managed in App.tsx state to allow for admin editing.
 
 export const faqData: FAQ[] = [
     {

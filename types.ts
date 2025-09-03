@@ -25,6 +25,8 @@ export interface User {
     isAdmin: boolean;
     credits: number;
     securityAmount: number; // For password recovery
+    banned: boolean;
+    notifications: string[];
 }
 
 export interface Order {

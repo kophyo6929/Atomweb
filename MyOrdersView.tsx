@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Order } from './types';
 import { Logo, EmptyState } from './components';
+import { useLanguage } from './i18n';
 
 interface MyOrdersViewProps {
     user: User;
@@ -9,8 +10,15 @@ interface MyOrdersViewProps {
 }
 
 const MyOrdersView = ({ user, orders, onNavigate }: MyOrdersViewProps) => {
+    const { t } = useLanguage();
     const [statusFilter, setStatusFilter] = useState('All');
-    const filterOptions = ['All', 'Pending Approval', 'Completed', 'Declined'];
+    
+    const filterOptions = [
+        { key: 'All', label: t('myOrders.filters.all') },
+        { key: 'Pending Approval', label: t('myOrders.filters.pending') },
+        { key: 'Completed', label: t('myOrders.filters.completed') },
+        { key: 'Declined', label: t('myOrders.filters.declined') }
+    ];
     
     const userOrders = orders.filter(o => o.userId === user.id);
 
@@ -22,12 +30,12 @@ const MyOrdersView = ({ user, orders, onNavigate }: MyOrdersViewProps) => {
         <div className="generic-view-container">
             <header className="dashboard-header">
                 <Logo />
-                <button onClick={() => onNavigate('DASHBOARD')} className="logout-button">Back to Dashboard</button>
+                <button onClick={() => onNavigate('DASHBOARD')} className="logout-button">{t('common.backToDashboard')}</button>
             </header>
             <main className="dashboard-main">
                 <div className="nav-header">
-                   <button onClick={() => onNavigate('DASHBOARD')} className="back-button">← Back</button>
-                    <h3>My Order History</h3>
+                   <button onClick={() => onNavigate('DASHBOARD')} className="back-button">← {t('common.back')}</button>
+                    <h3>{t('myOrders.title')}</h3>
                 </div>
 
                 {userOrders.length > 0 ? (
@@ -35,11 +43,11 @@ const MyOrdersView = ({ user, orders, onNavigate }: MyOrdersViewProps) => {
                         <div className="order-filters">
                             {filterOptions.map(opt => (
                                 <button 
-                                    key={opt}
-                                    className={`filter-btn ${statusFilter === opt ? 'active' : ''}`}
-                                    onClick={() => setStatusFilter(opt)}
+                                    key={opt.key}
+                                    className={`filter-btn ${statusFilter === opt.key ? 'active' : ''}`}
+                                    onClick={() => setStatusFilter(opt.key)}
                                 >
-                                    {opt.replace(' Approval', '')}
+                                    {opt.label}
                                 </button>
                             ))}
                         </div>
@@ -48,10 +56,10 @@ const MyOrdersView = ({ user, orders, onNavigate }: MyOrdersViewProps) => {
                                 <div key={o.id} className="order-item">
                                     <div className="order-info">
                                         <h4>{o.product.name}</h4>
-                                        <p>Order ID: {o.id}</p>
-                                        <p>Date: {new Date(o.date).toLocaleString()}</p>
-                                        {o.deliveryInfo && <p>Delivered to: {o.deliveryInfo}</p>}
-                                        {o.paymentMethod && <p>Payment via: {o.paymentMethod}</p>}
+                                        <p>{t('myOrders.orderId')} {o.id}</p>
+                                        <p>{t('myOrders.date')} {new Date(o.date).toLocaleString()}</p>
+                                        {o.deliveryInfo && <p>{t('myOrders.deliveredTo')} {o.deliveryInfo}</p>}
+                                        {o.paymentMethod && <p>{t('myOrders.paymentVia')} {o.paymentMethod}</p>}
                                     </div>
                                     <div className="order-details">
                                         <span className={`status-badge status-${o.status.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>{o.status}</span>
@@ -60,13 +68,13 @@ const MyOrdersView = ({ user, orders, onNavigate }: MyOrdersViewProps) => {
                                         </p>
                                     </div>
                                 </div>
-                            )) : <EmptyState message="No orders found" subMessage="There are no orders that match the current filter." />}
+                            )) : <EmptyState message={t('myOrders.emptyFilterTitle')} subMessage={t('myOrders.emptyFilterSubtitle')} />}
                         </div>
                     </>
                 ) : (
                      <EmptyState 
-                        message="You haven't placed any orders yet"
-                        subMessage="Browse products or buy credits to get started."
+                        message={t('myOrders.emptyTitle')}
+                        subMessage={t('myOrders.emptySubtitle')}
                     />
                 )}
             </main>

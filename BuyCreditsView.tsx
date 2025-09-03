@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { User, Order } from './types';
-import { paymentAccountDetails } from './data';
+import { User, Order, PaymentAccountDetails } from './types';
 import { MMK_PER_CREDIT } from './utils';
 import { Logo } from './components';
+import { useLanguage } from './i18n';
 
 interface BuyCreditsViewProps {
     user: User;
     onNavigate: (view: string) => void;
     orders: Order[];
     setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+    onAdminNotify: (message: string) => void;
+    paymentAccountDetails: PaymentAccountDetails;
 }
 
-const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewProps) => {
+const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, paymentAccountDetails }: BuyCreditsViewProps) => {
+    const { t } = useLanguage();
     const [step, setStep] = useState(1); // 1: amount, 2: method, 3: upload
     const [amountMMK, setAmountMMK] = useState('');
     const [paymentMethod, setPaymentMethod] = useState(''); // 'KPay' or 'Wave Pay'
@@ -30,7 +33,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
         if (parseFloat(amountMMK) > 0) {
             setStep(2);
         } else {
-            alert('Please enter a valid amount.');
+            alert(t('buyCredits.alerts.invalidAmount'));
         }
     };
 
@@ -56,7 +59,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
     
     const handleSubmitRequest = () => {
         if (!paymentProof) {
-            alert('Please upload a payment proof screenshot.');
+            alert(t('buyCredits.alerts.noProof'));
             return;
         }
         const creditAmount = parseFloat(amountMMK) / MMK_PER_CREDIT;
@@ -72,7 +75,12 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
             date: new Date().toISOString(),
         };
         setOrders(prev => [...prev, newOrder]);
-        alert('Your payment request has been submitted for approval.');
+
+        // Send notification to Admin
+        const notificationMessage = `💰 Credit Request: ${user.username} requests ${parseFloat(amountMMK).toLocaleString()} MMK via ${paymentMethod}.`;
+        onAdminNotify(notificationMessage);
+
+        alert(t('buyCredits.alerts.requestSubmitted'));
         onNavigate('MY_ORDERS');
     };
 
@@ -89,10 +97,10 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
             case 1:
                 return (
                      <div className="buy-credits-flow">
-                        <h3>Step 1: Choose Amount</h3>
+                        <h3>{t('buyCredits.step1Title')}</h3>
                         
                         <div className="credit-packages">
-                            <h4>Quick Buy</h4>
+                            <h4>{t('buyCredits.quickBuy')}</h4>
                             <div className="package-buttons">
                                 {creditPackages.map(credits => (
                                     <button key={credits} className="package-btn" onClick={() => handlePackageSelect(credits)}>
@@ -104,27 +112,27 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
                         </div>
 
                         <div className="or-divider">
-                            <span>OR</span>
+                            <span>{t('buyCredits.or')}</span>
                         </div>
                         
                         <form onSubmit={handleAmountSubmit}>
-                            <h4>Enter Custom Amount</h4>
+                            <h4>{t('buyCredits.customAmount')}</h4>
                             <div className="input-group">
-                                <label htmlFor="custom-mmk">Amount (MMK)</label>
+                                <label htmlFor="custom-mmk">{t('buyCredits.amountLabel')}</label>
                                 <input 
                                     id="custom-mmk" 
                                     type="number" 
                                     value={amountMMK} 
                                     onChange={e => setAmountMMK(e.target.value)} 
                                     className="input-field" 
-                                    placeholder="e.g., 5000" 
+                                    placeholder={t('buyCredits.amountPlaceholder')}
                                 />
                             </div>
                             <div className="credit-equivalent">
-                                You will get: <span>{(amountMMK ? parseFloat(amountMMK) / MMK_PER_CREDIT : 0).toFixed(2)} C</span>
+                                {t('buyCredits.youWillGet')} <span>{(amountMMK ? parseFloat(amountMMK) / MMK_PER_CREDIT : 0).toFixed(2)} C</span>
                             </div>
                             <button type="submit" className="submit-button" disabled={!amountMMK || parseFloat(amountMMK) <= 0}>
-                                Next →
+                                {t('buyCredits.nextButton')}
                             </button>
                         </form>
                     </div>
@@ -132,30 +140,34 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
             case 2:
                 return (
                     <div className="buy-credits-flow">
-                        <h3>Step 2: Select Payment Method</h3>
-                        <p>You are purchasing for <strong>{parseFloat(amountMMK).toLocaleString()} MMK</strong>.</p>
+                        <h3>{t('buyCredits.step2Title')}</h3>
+                        <p>{t('buyCredits.purchasingFor', { amount: parseFloat(amountMMK).toLocaleString() })}</p>
                         <div className="payment-methods">
-                            <button className="payment-method-btn" onClick={() => selectPaymentMethod('KPay')}>KPay</button>
-                            <button className="payment-method-btn" onClick={() => selectPaymentMethod('Wave Pay')}>Wave Pay</button>
+                            {Object.keys(paymentAccountDetails).map(method => (
+                               <button key={method} className="payment-method-btn" onClick={() => selectPaymentMethod(method)}>{method}</button>
+                            ))}
                         </div>
                     </div>
                 );
             case 3:
                  const account = paymentAccountDetails[paymentMethod];
+                 if (!account) {
+                     return <p>Error: Selected payment method is not configured.</p>
+                 }
                 return (
                     <div className="buy-credits-flow">
-                        <h3>Step 3: Upload Payment Proof</h3>
+                        <h3>{t('buyCredits.step3Title')}</h3>
                         <div className="payment-instructions">
-                            <p>Please transfer <strong>{parseFloat(amountMMK).toLocaleString()} MMK</strong> to the following {paymentMethod} account:</p>
+                            <p>{t('buyCredits.instructions', { amount: parseFloat(amountMMK).toLocaleString(), method: paymentMethod })}</p>
                             <div className="account-details">
-                                <p><span>Name:</span> <strong>{account.name}</strong></p>
-                                <p><span>Number:</span> <strong className="account-number">{account.number}</strong></p>
+                                <p><span>{t('buyCredits.accountName')}</span> <strong>{account.name}</strong></p>
+                                <p><span>{t('buyCredits.accountNumber')}</span> <strong className="account-number">{account.number}</strong></p>
                             </div>
-                            <p className="upload-instruction">After payment, please upload the screenshot of your payment proof to this website.</p>
+                            <p className="upload-instruction">{t('buyCredits.uploadInstruction')}</p>
                         </div>
                         <div className="upload-area">
                             <label htmlFor="file-upload" className="custom-file-upload">
-                                {paymentProofPreview ? 'Change Screenshot' : 'Choose Screenshot'}
+                                {paymentProofPreview ? t('buyCredits.changeScreenshot') : t('buyCredits.chooseScreenshot')}
                             </label>
                             <input id="file-upload" type="file" accept="image/*" onChange={handleFileChange} />
                             {paymentProofPreview && (
@@ -165,7 +177,7 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
                             )}
                         </div>
                         <button onClick={handleSubmitRequest} className="submit-button" disabled={!paymentProof}>
-                            Submit Request
+                            {t('buyCredits.submitRequestButton')}
                         </button>
                     </div>
                 );
@@ -177,12 +189,12 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders }: BuyCreditsViewP
          <div className="generic-view-container">
             <header className="dashboard-header">
                 <Logo />
-                <button onClick={() => onNavigate('DASHBOARD')} className="logout-button">Back to Dashboard</button>
+                <button onClick={() => onNavigate('DASHBOARD')} className="logout-button">{t('common.backToDashboard')}</button>
             </header>
             <main className="dashboard-main">
                 <div className="nav-header">
-                   <button onClick={goBack} className="back-button">← Back</button>
-                    <h3>Buy Credits</h3>
+                   <button onClick={goBack} className="back-button">← {t('common.back')}</button>
+                    <h3>{t('buyCredits.title')}</h3>
                 </div>
                 {renderStep()}
             </main>

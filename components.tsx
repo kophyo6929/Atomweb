@@ -7,8 +7,8 @@ export const Logo = () => (
         <svg className="logo-icon-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style={{stopColor: '#00BFFF'}} />
-                    <stop offset="100%" style={{stopColor: '#1E90FF'}} />
+                    <stop offset="0%" style={{stopColor: '#F39C12'}} />
+                    <stop offset="100%" style={{stopColor: '#E67E22'}} />
                 </linearGradient>
             </defs>
             <path
