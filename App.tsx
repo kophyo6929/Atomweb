@@ -8,6 +8,7 @@ import BuyCreditsView from './BuyCreditsView';
 import MyOrdersView from './MyOrdersView';
 import AdminPanel from './AdminPanel';
 import FAQView from './FAQView';
+import UserProfileView from './UserProfileView';
 
 const App = () => {
   // State Management
@@ -41,12 +42,26 @@ const App = () => {
     }
   };
 
-  const handleRegisterSuccess = (username: string) => {
-    const newUser: User = { id: users.length + 1, username, password: 'password', isAdmin: false, credits: 0 };
+  const handleRegisterSuccess = (username: string, password: string, securityAmount: number) => {
+    const newUser: User = { 
+        id: Math.floor(100000 + Math.random() * 900000), // Generate a random 6-digit ID
+        username, 
+        password, // Use the provided password
+        isAdmin: false, 
+        credits: 0, 
+        securityAmount 
+    };
     setUsers([...users, newUser]);
     setCurrentUser(newUser);
     setIsLoggedIn(true);
     setCurrentView('DASHBOARD');
+    alert(`Registration successful! Your new User ID is ${newUser.id}. Please save it for account recovery.`);
+  };
+
+  const handlePasswordReset = (userId: number, newPassword: string) => {
+    setUsers(prevUsers =>
+      prevUsers.map(u => (u.id === userId ? { ...u, password: newPassword } : u))
+    );
   };
 
   const handleLogout = () => {
@@ -72,6 +87,8 @@ const App = () => {
         return <AdminPanel onNavigate={navigateTo} products={products} setProducts={setProducts} users={users} setUsers={setUsers} orders={orders} setOrders={setOrders} />;
        case 'FAQ':
         return <FAQView onNavigate={navigateTo} />;
+      case 'USER_PROFILE':
+        return <UserProfileView user={currentUser} orders={orders} onNavigate={navigateTo} />;
       default:
         return <Dashboard user={currentUser} onNavigate={navigateTo} onLogout={handleLogout} />;
     }
@@ -82,7 +99,12 @@ const App = () => {
       {isLoggedIn && currentUser ? (
         renderView()
       ) : (
-        <AuthPage onLoginSuccess={handleLoginSuccess} onRegisterSuccess={handleRegisterSuccess} />
+        <AuthPage 
+            onLoginSuccess={handleLoginSuccess} 
+            onRegisterSuccess={handleRegisterSuccess}
+            onPasswordReset={handlePasswordReset}
+            users={users}
+        />
       )}
     </>
   );

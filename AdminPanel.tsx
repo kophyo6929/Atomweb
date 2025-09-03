@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductsData, User, Order, ProductItem } from './types';
 import { MMK_PER_CREDIT } from './utils';
-import { Logo, CollapsibleSection } from './components';
+import { Logo, CollapsibleSection, EmptyState } from './components';
 
 // --- ADMIN PANEL --- //
 
@@ -56,6 +56,8 @@ const AdminPanel = ({ onNavigate, products, setProducts, users, setUsers, orders
 const AdminManageProducts = ({ products, setProducts }: { products: ProductsData, setProducts: React.Dispatch<React.SetStateAction<ProductsData>> }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null); // null for new, product object for editing
+    
+    const productCount = Object.values(products).reduce((acc, categories) => acc + Object.values(categories).reduce((catAcc, list) => catAcc + list.length, 0), 0);
 
     const handleAddNew = () => {
         setEditingProduct(null);
@@ -110,33 +112,40 @@ const AdminManageProducts = ({ products, setProducts }: { products: ProductsData
                 <h2>Manage Products</h2>
                 <button onClick={handleAddNew} className="button-add">+ Add New Product</button>
             </div>
-            <div className="admin-table-container">
-                <table className="admin-table">
-                    <thead><tr><th>Operator</th><th>Category</th><th>Name</th><th>ID</th><th>Price (MMK)</th><th>Actions</th></tr></thead>
-                    <tbody>
-                        {Object.entries(products).flatMap(([operator, categories]) => 
-                            Object.entries(categories).flatMap(([category, productList]) => 
-                                productList.map(p => {
-                                    const fullProduct = { ...p, operator, category };
-                                    return (
-                                        <tr key={p.id}>
-                                            <td>{operator}</td>
-                                            <td>{category}</td>
-                                            <td>{p.name}</td>
-                                            <td>{p.id}</td>
-                                            <td>{p.price_mmk.toLocaleString()}</td>
-                                            <td className="admin-actions">
-                                                <button onClick={() => handleEdit(fullProduct)} className="button-secondary">Edit</button>
-                                                <button onClick={() => handleDelete(fullProduct)} className="button-danger">Delete</button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {productCount > 0 ? (
+                <div className="admin-table-container">
+                    <table className="admin-table">
+                        <thead><tr><th>Operator</th><th>Category</th><th>Name</th><th>ID</th><th>Price (MMK)</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {Object.entries(products).flatMap(([operator, categories]) => 
+                                Object.entries(categories).flatMap(([category, productList]) => 
+                                    productList.map(p => {
+                                        const fullProduct = { ...p, operator, category };
+                                        return (
+                                            <tr key={p.id}>
+                                                <td>{operator}</td>
+                                                <td>{category}</td>
+                                                <td>{p.name}</td>
+                                                <td>{p.id}</td>
+                                                <td>{p.price_mmk.toLocaleString()}</td>
+                                                <td className="admin-actions">
+                                                    <button onClick={() => handleEdit(fullProduct)} className="button-secondary">Edit</button>
+                                                    <button onClick={() => handleDelete(fullProduct)} className="button-danger">Delete</button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <EmptyState 
+                    message="No products have been added yet"
+                    subMessage="Click '+ Add New Product' to get started."
+                />
+            )}
             <ProductEditModal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)}
@@ -239,22 +248,26 @@ const AdminManageUsers: React.FC<{ users: User[], setUsers: React.Dispatch<React
     return (
         <div>
             <h2>Manage Users</h2>
-            <div className="admin-table-container">
-                <table className="admin-table">
-                     <thead><tr><th>ID</th><th>Username</th><th>Admin?</th><th>Credits</th><th>Actions</th></tr></thead>
-                     <tbody>
-                        {users.map(u => (
-                            <tr key={u.id}>
-                                <td>{u.id}</td>
-                                <td>{u.username}</td>
-                                <td>{u.isAdmin ? 'Yes' : 'No'}</td>
-                                <td>{u.credits.toFixed(2)}</td>
-                                <td><button onClick={() => adjustCredits(u.id, u.credits)} className="button-secondary">Adjust Credits</button></td>
-                            </tr>
-                        ))}
-                     </tbody>
-                </table>
-            </div>
+            {users.length > 0 ? (
+                 <div className="admin-table-container">
+                    <table className="admin-table">
+                        <thead><tr><th>ID</th><th>Username</th><th>Admin?</th><th>Credits</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            {users.map(u => (
+                                <tr key={u.id}>
+                                    <td>{u.id}</td>
+                                    <td>{u.username}</td>
+                                    <td>{u.isAdmin ? 'Yes' : 'No'}</td>
+                                    <td>{u.credits.toFixed(2)}</td>
+                                    <td><button onClick={() => adjustCredits(u.id, u.credits)} className="button-secondary">Adjust Credits</button></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <EmptyState message="No users found" />
+            )}
         </div>
     );
 };
@@ -303,6 +316,8 @@ const AdminViewAllOrders: React.FC<{
     const approvedPaymentRequests = orders.filter(o => o.type === 'CREDIT' && o.status === 'Completed').sort(sortRecentFirst);
     const declinedPaymentRequests = orders.filter(o => o.type === 'CREDIT' && o.status === 'Declined').sort(sortRecentFirst);
     
+    const renderEmptyState = (message: string) => <EmptyState message={message} subMessage="There's nothing to show here right now." />;
+
     const renderProductOrderTable = (orderList: Order[]) => (
          <div className="admin-table-container">
             <table className="admin-table">
@@ -356,12 +371,12 @@ const AdminViewAllOrders: React.FC<{
     return (
         <div className="admin-order-view">
             <h2>All User Orders</h2>
-            <CollapsibleSection title={`Pending Product Orders (${pendingProductOrders.length})`} startOpen={true}>{pendingProductOrders.length > 0 ? renderProductOrderTable(pendingProductOrders) : <p>No pending product orders.</p>}</CollapsibleSection>
-            <CollapsibleSection title={`Pending Payment Requests (${pendingPaymentRequests.length})`} startOpen={true}>{pendingPaymentRequests.length > 0 ? renderPaymentRequestTable(pendingPaymentRequests) : <p>No pending payment requests.</p>}</CollapsibleSection>
-            <CollapsibleSection title={`Approved Product Orders (${approvedProductOrders.length})`}>{approvedProductOrders.length > 0 ? renderProductOrderTable(approvedProductOrders) : <p>No approved product orders.</p>}</CollapsibleSection>
-            <CollapsibleSection title={`Declined Product Orders (${declinedProductOrders.length})`}>{declinedProductOrders.length > 0 ? renderProductOrderTable(declinedProductOrders) : <p>No declined product orders.</p>}</CollapsibleSection>
-            <CollapsibleSection title={`Approved Payment Requests (${approvedPaymentRequests.length})`}>{approvedPaymentRequests.length > 0 ? renderPaymentRequestTable(approvedPaymentRequests) : <p>No approved payment requests.</p>}</CollapsibleSection>
-            <CollapsibleSection title={`Declined Payment Requests (${declinedPaymentRequests.length})`}>{declinedPaymentRequests.length > 0 ? renderPaymentRequestTable(declinedPaymentRequests) : <p>No declined payment requests.</p>}</CollapsibleSection>
+            <CollapsibleSection title={`Pending Product Orders (${pendingProductOrders.length})`} startOpen={true}>{pendingProductOrders.length > 0 ? renderProductOrderTable(pendingProductOrders) : renderEmptyState('No pending product orders')}</CollapsibleSection>
+            <CollapsibleSection title={`Pending Payment Requests (${pendingPaymentRequests.length})`} startOpen={true}>{pendingPaymentRequests.length > 0 ? renderPaymentRequestTable(pendingPaymentRequests) : renderEmptyState('No pending payment requests')}</CollapsibleSection>
+            <CollapsibleSection title={`Approved Product Orders (${approvedProductOrders.length})`}>{approvedProductOrders.length > 0 ? renderProductOrderTable(approvedProductOrders) : renderEmptyState('No approved product orders')}</CollapsibleSection>
+            <CollapsibleSection title={`Declined Product Orders (${declinedProductOrders.length})`}>{declinedProductOrders.length > 0 ? renderProductOrderTable(declinedProductOrders) : renderEmptyState('No declined product orders')}</CollapsibleSection>
+            <CollapsibleSection title={`Approved Payment Requests (${approvedPaymentRequests.length})`}>{approvedPaymentRequests.length > 0 ? renderPaymentRequestTable(approvedPaymentRequests) : renderEmptyState('No approved payment requests')}</CollapsibleSection>
+            <CollapsibleSection title={`Declined Payment Requests (${declinedPaymentRequests.length})`}>{declinedPaymentRequests.length > 0 ? renderPaymentRequestTable(declinedPaymentRequests) : renderEmptyState('No declined payment requests')}</CollapsibleSection>
             {viewingProof && <div className="modal-backdrop" onClick={() => setViewingProof(null)}><div className="modal-content proof-modal" onClick={e => e.stopPropagation()}><img src={viewingProof} alt="Payment Proof" /><button onClick={() => setViewingProof(null)} className="submit-button">Close</button></div></div>}
         </div>
     );

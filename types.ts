@@ -24,6 +24,7 @@ export interface User {
     password?: string; // Should not be passed around in a real app
     isAdmin: boolean;
     credits: number;
+    securityAmount: number; // For password recovery
 }
 
 export interface Order {

@@ -47,3 +47,11 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, c
         </div>
     );
 };
+
+export const EmptyState: React.FC<{ message: string; subMessage?: string; }> = ({ message, subMessage }) => (
+    <div className="empty-state-container">
+        <div className="empty-state-icon">📭</div>
+        <h3>{message}</h3>
+        {subMessage && <p>{subMessage}</p>}
+    </div>
+);

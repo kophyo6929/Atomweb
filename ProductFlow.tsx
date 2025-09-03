@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ProductsData, ProductItem, User, Order } from './types';
 import { calculateCreditCost } from './utils';
-import { Logo } from './components';
+import { Logo, EmptyState } from './components';
 
 // --- PRODUCT BROWSE & PURCHASE FLOW --- //
 
@@ -81,7 +81,7 @@ const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers }
                 </div>
                 {step === 'OPERATOR' && <OperatorList operators={Object.keys(products)} onSelect={selectOperator} />}
                 {step === 'CATEGORY' && selectedOperator && <CategoryList categories={Object.keys(products[selectedOperator])} onSelect={selectCategory} />}
-                {step === 'LIST' && selectedOperator && selectedCategory && <ProductList products={products[selectedOperator][selectedCategory]} onPurchase={handlePurchase} user={user} />}
+                {step === 'LIST' && selectedOperator && selectedCategory && <ProductList products={products[selectedOperator][selectedCategory] || []} onPurchase={handlePurchase} user={user} />}
             </main>
         </div>
     );
@@ -154,18 +154,23 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
                 className="search-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={products.length === 0}
             />
             <div className="product-list">
-                {filteredProducts.length > 0 ? filteredProducts.map(p => (
-                    <div key={p.id} className="product-item">
-                        <div className="product-info">
-                            <h4>{p.name}</h4>
-                            {p.extra && <p className="product-extra">{p.extra}</p>}
-                            <p>{p.price_mmk.toLocaleString()} MMK / {calculateCreditCost(p.price_mmk).toFixed(2)} C</p>
+                 {products.length > 0 ? (
+                    filteredProducts.length > 0 ? filteredProducts.map(p => (
+                        <div key={p.id} className="product-item">
+                            <div className="product-info">
+                                <h4>{p.name}</h4>
+                                {p.extra && <p className="product-extra">{p.extra}</p>}
+                                <p>{p.price_mmk.toLocaleString()} MMK / {calculateCreditCost(p.price_mmk).toFixed(2)} C</p>
+                            </div>
+                            <button onClick={() => handleBuyClick(p)} className="buy-button">Buy</button>
                         </div>
-                        <button onClick={() => handleBuyClick(p)} className="buy-button">Buy</button>
-                    </div>
-                )) : <p>No products found matching your search.</p>}
+                    )) : <EmptyState message="No products found" subMessage="Your search did not match any products." />
+                ) : (
+                    <EmptyState message="No products in this category" subMessage="An admin may need to add products here." />
+                )}
             </div>
 
             {showPhoneModal && selectedProduct && (
