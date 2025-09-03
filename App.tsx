@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initialProducts, initialUsers, initialOrders } from './data';
-import { User, Order, PaymentAccountDetails } from './types';
+import { User, Order, PaymentAccountDetails, ProductsData } from './types';
 import AuthPage from './Auth';
 import Dashboard from './Dashboard';
 import ProductFlow from './ProductFlow';
@@ -11,6 +11,7 @@ import FAQView from './FAQView';
 import UserProfileView from './UserProfileView';
 import { useLanguage } from './i18n';
 import { LoadingSpinner } from './components';
+import { usePersistentState } from './utils';
 
 const initialPaymentDetails: PaymentAccountDetails = {
     'KPay': { name: 'ATOM Point Admin', number: '09 987 654 321' },
@@ -25,14 +26,14 @@ const App = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState('DASHBOARD');
   
-  // Mock Database State
-  const [products, setProducts] = useState(initialProducts);
-  const [users, setUsers] = useState(initialUsers);
-  const [orders, setOrders] = useState(initialOrders);
+  // Persisted "Database" State
+  const [products, setProducts] = usePersistentState<ProductsData>('app_products', initialProducts);
+  const [users, setUsers] = usePersistentState<User[]>('app_users', initialUsers);
+  const [orders, setOrders] = usePersistentState<Order[]>('app_orders', initialOrders);
 
-  // Site-wide editable settings
-  const [paymentDetails, setPaymentDetails] = useState<PaymentAccountDetails>(initialPaymentDetails);
-  const [adminContact, setAdminContact] = useState('https://t.me/CEO_METAVERSE');
+  // Persisted Site-wide editable settings
+  const [paymentDetails, setPaymentDetails] = usePersistentState<PaymentAccountDetails>('app_paymentDetails', initialPaymentDetails);
+  const [adminContact, setAdminContact] = usePersistentState<string>('app_adminContact', 'https://t.me/CEO_METAVERSE');
 
   // Effect to restore session on initial load
   useEffect(() => {
@@ -42,8 +43,8 @@ const App = () => {
 
         if (storedUser) {
             const user: User = JSON.parse(storedUser);
-            // Quick check to ensure the user still exists in our mock DB
-            if (initialUsers.some(u => u.id === user.id)) {
+            // Quick check to ensure the user still exists in our persistent user list
+            if (users.some(u => u.id === user.id)) {
                 setCurrentUser(user);
                 setIsLoggedIn(true);
                 setCurrentView(storedView || 'DASHBOARD');
@@ -55,7 +56,7 @@ const App = () => {
     } finally {
         setIsLoading(false);
     }
-  }, []);
+  }, []); // Intentionally empty: runs only once on mount after state is initialized from localStorage
 
 
   // Effect to manage body class for dynamic backgrounds
@@ -77,14 +78,17 @@ const App = () => {
     if (currentUser) {
       const updatedUser = users.find(u => u.id === currentUser.id);
       if (updatedUser) {
-        setCurrentUser(updatedUser);
-        sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        // Prevent unnecessary re-renders if the user object is identical
+        if (JSON.stringify(currentUser) !== JSON.stringify(updatedUser)) {
+          setCurrentUser(updatedUser);
+          sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        }
       } else {
         // The user was deleted, log them out
         handleLogout();
       }
     }
-  }, [users]);
+  }, [users, currentUser]);
 
   const handleLoginSuccess = (username: string, password?: string) => {
     // In a real app, never handle passwords on the client side like this.
@@ -125,7 +129,7 @@ const App = () => {
         banned: false,
         notifications: ["Welcome to the new Atom Point Web!"],
     };
-    setUsers([...users, newUser]);
+    setUsers(prevUsers => [...prevUsers, newUser]);
     setCurrentUser(newUser);
     setIsLoggedIn(true);
     setCurrentView('DASHBOARD');
@@ -190,9 +194,9 @@ const App = () => {
       case 'DASHBOARD':
         return <Dashboard user={currentUser} onNavigate={navigateTo} onLogout={handleLogout} adminContact={adminContact} />;
       case 'BROWSE_PRODUCTS':
-        return <ProductFlow products={products} onNavigate={navigateTo} user={currentUser} setOrders={setOrders} orders={orders} setUsers={setUsers} users={users} onAdminNotify={sendAdminNotification} />;
+        return <ProductFlow products={products} onNavigate={navigateTo} user={currentUser} setOrders={setOrders} setUsers={setUsers} users={users} onAdminNotify={sendAdminNotification} />;
       case 'BUY_CREDITS':
-        return <BuyCreditsView user={currentUser} onNavigate={navigateTo} setOrders={setOrders} orders={orders} onAdminNotify={sendAdminNotification} paymentAccountDetails={paymentDetails} />;
+        return <BuyCreditsView user={currentUser} onNavigate={navigateTo} setOrders={setOrders} onAdminNotify={sendAdminNotification} paymentAccountDetails={paymentDetails} />;
       case 'MY_ORDERS':
         return <MyOrdersView user={currentUser} onNavigate={navigateTo} orders={orders} />;
       case 'ADMIN_PANEL':

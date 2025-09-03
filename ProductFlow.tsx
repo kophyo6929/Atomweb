@@ -11,14 +11,13 @@ interface ProductFlowProps {
     products: ProductsData;
     onNavigate: (view: string) => void;
     user: User;
-    orders: Order[];
     setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
     users: User[];
     setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     onAdminNotify: (message: string) => void;
 }
 
-const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers, onAdminNotify }: ProductFlowProps) => {
+const ProductFlow = ({ products, onNavigate, user, setOrders, setUsers, onAdminNotify }: ProductFlowProps) => {
     const { t } = useLanguage();
     const { showNotification } = useNotification();
     const [step, setStep] = useState('OPERATOR'); // OPERATOR, CATEGORY, LIST
@@ -67,7 +66,7 @@ const ProductFlow = ({ products, onNavigate, user, setOrders, orders, setUsers, 
             date: new Date().toISOString(),
             deliveryInfo,
         };
-        setOrders([...orders, newOrder]);
+        setOrders(prevOrders => [...prevOrders, newOrder]);
         
         // Send notification to Admin
         const notificationMessage = `📦 New Order: ${user.username} bought ${product.name} for ${deliveryInfo}.`;

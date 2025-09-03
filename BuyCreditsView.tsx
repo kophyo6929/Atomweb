@@ -8,13 +8,12 @@ import { useNotification } from './NotificationContext';
 interface BuyCreditsViewProps {
     user: User;
     onNavigate: (view: string) => void;
-    orders: Order[];
     setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
     onAdminNotify: (message: string) => void;
     paymentAccountDetails: PaymentAccountDetails;
 }
 
-const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, paymentAccountDetails }: BuyCreditsViewProps) => {
+const BuyCreditsView = ({ user, onNavigate, setOrders, onAdminNotify, paymentAccountDetails }: BuyCreditsViewProps) => {
     const { t } = useLanguage();
     const { showNotification } = useNotification();
     const [step, setStep] = useState(1); // 1: amount, 2: method, 3: upload
