@@ -9,13 +9,11 @@ const container = document.getElementById('root');
 if (container) {
     const root = createRoot(container);
     root.render(
-      <React.StrictMode>
-        <LanguageProvider>
-          <NotificationProvider>
-            <App />
-          </NotificationProvider>
-        </LanguageProvider>
-      </React.StrictMode>
+      <LanguageProvider>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </LanguageProvider>
     );
 } else {
     console.error("Fatal Error: Root container 'root' not found in the DOM.");

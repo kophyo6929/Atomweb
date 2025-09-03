@@ -94,7 +94,8 @@ const BuyCreditsView = ({ user, onNavigate, setOrders, orders, onAdminNotify, pa
                 onNavigate('MY_ORDERS');
             } catch (error) {
                 console.error("Failed to submit credit request:", error);
-                showNotification('An unexpected error occurred.', 'error');
+                const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+                showNotification(`Error: ${message}`, 'error');
                 setIsSubmitting(false); // Re-enable button on error
             }
         }, 50);

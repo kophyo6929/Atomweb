@@ -160,7 +160,8 @@ const ProductList = ({ products, onPurchase, user }: ProductListProps) => {
                 // The component will unmount.
             } catch (e) {
                 console.error("Purchase failed", e);
-                showNotification("An error occurred during purchase.", 'error');
+                const message = e instanceof Error ? e.message : 'An unknown error occurred.';
+                showNotification(`Error: ${message}`, 'error');
                 setIsSubmitting(false); // Re-enable on error
             }
         }, 50);
